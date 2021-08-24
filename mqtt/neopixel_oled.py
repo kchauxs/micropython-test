@@ -1,6 +1,5 @@
 # Librerias
 import time
-import esp32
 import machine
 import network
 import _thread
@@ -16,13 +15,22 @@ scl = machine.Pin(19, machine.Pin.OUT, machine.Pin.PULL_UP)
 sda = machine.Pin(21, machine.Pin.OUT, machine.Pin.PULL_UP)
 i2c = machine.SoftI2C(scl=scl, sda=sda, freq=400000)
 oled = ssd1306.SSD1306_I2C(128, 64, i2c, addr=0x3C)
+
 # WIFI
-ssid = 'Kevin'  # Nombre de la Red
-password = 'nqs4085A'  # Contraseña de la red
+ssid = ''  # Nombre de la Red
+password = ''  # Contraseña de la red
+
 # MQTT
-root_topic = 'hG6NETWFkyoklYw'
-subtopic = 'devices'
+mqtt_server = ''
+port_mqtt = 1883
+
+user_mqtt = ''
+pswd_mqtt = ''
+
+root_topic = ''
+subtopic = ''
 node = root_topic + '/' + subtopic + '/'
+
 # LEDS
 led_2 = Pin(2, Pin.OUT)
 np = neopixel.NeoPixel(machine.Pin(13), 60)
@@ -69,29 +77,23 @@ def form_sub(topic, msg):
     print("[INFO] Recivido de:", (topic.decode(), msg.decode()))
 
 
-def Conexion_MQTT():
+def Connection_MQTT():
     client_id = ubinascii.hexlify(unique_id())
-    mqtt_server = 'ioticos.org'
-    port_mqtt = 1883
-    # Si su servidor no necesita usuario escribe None sin comillas
-    user_mqtt = '4kwXM81rCJ0NAbj'
-    # Si su servidor no necesita contraseña escribe None sin comillas
-    pswd_mqtt = 'yfp14kGTueiG3CL'
+
     client = MQTTClient(client_id, mqtt_server,
                         port_mqtt, user_mqtt, pswd_mqtt)
     client.set_callback(form_sub)
     client.connect()
-    client.subscribe(b'hG6NETWFkyoklYw/devices/#')
+    client.subscribe(b''+node+'#')
 
-    #print('Conectado a %s' % mqtt_server, 20, 30, 0)
+    #print('connected to %s' % mqtt_server, 20, 30, 0)
     print('MQTT:%s' % mqtt_server)
     led_2.on()
     return client
 
+
 # Reinicia la conexión de MQTT
-
-
-def Reinciar_conexion():
+def Restart_Connection():
     led_2.off()
     print('Fallo en la conexion. Intentando de nuevo...')
     time.sleep(10)
@@ -151,10 +153,9 @@ def show_on_display(e):
         oled.fill(0)
         oled.text('Pattern:'+pattern, 10, 5)
         oled.text('RGB: ('+str(color[0])+',' +
-                str(color[1])+','+str(color[2])+')', 1, 30)
+                  str(color[1])+','+str(color[2])+')', 1, 30)
         oled.show()
         time.sleep_ms(e)
-
 
 
 def fahrenhei_celsius(x):
@@ -174,9 +175,9 @@ if __name__ == '__main__':
     print(wlan.ifconfig())
 
     try:
-        client = Conexion_MQTT()
+        client = Connection_MQTT()
     except OSError as e:
-        Reinciar_conexion()
+        Restart_Connection()
 
     _thread.start_new_thread(start_leds, (25,))
     _thread.start_new_thread(show_on_display, (25,))
@@ -187,4 +188,4 @@ if __name__ == '__main__':
             time.sleep_ms(25)
 
         except OSError as e:
-            Reinciar_conexion()
+            Restart_Connection()

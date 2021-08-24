@@ -11,16 +11,25 @@ from umqttsimple import MQTTClient
 # WIFI
 ssid = ''  # Nombre de la Red
 password = ''  # Contraseña de la red
+
 # MQTT
-root_topic = 'hG6NETWFkyoklYw'
-subtopic = 'devices'
+mqtt_server = ''
+port_mqtt = 1883
+# user
+user_mqtt = ''
+pswd_mqtt = ''
+# topico
+root_topic = ''
+subtopic = ''
 node = root_topic + '/' + subtopic + '/'
+
 # LEDS
 led_2 = Pin(2, Pin.OUT)
 np = neopixel.NeoPixel(machine.Pin(13), 60)
-buzzer = Pin(26, Pin.OUT)
 color = (0, 255, 0)
 pattern = 'all'
+# buzzer - (opcional)
+buzzer = Pin(26, Pin.OUT)
 
 
 def activate_buzzer(_time=200):
@@ -54,33 +63,28 @@ def form_sub(topic, msg):
     print("[INFO] Recivido de:", (topic.decode(), msg.decode()))
 
 
-def Conexion_MQTT():
+def Connection_MQTT():
     client_id = ubinascii.hexlify(unique_id())
-    mqtt_server = 'ioticos.org'
-    port_mqtt = 1883
-    # Si su servidor no necesita usuario escribe None sin comillas
-    user_mqtt = '4kwXM81rCJ0NAbj'
-    # Si su servidor no necesita contraseña escribe None sin comillas
-    pswd_mqtt = 'yfp14kGTueiG3CL'
+
     client = MQTTClient(client_id, mqtt_server,
                         port_mqtt, user_mqtt, pswd_mqtt)
     client.set_callback(form_sub)
     client.connect()
-    client.subscribe(b'hG6NETWFkyoklYw/devices/#')
+    client.subscribe(b''+node+'#')
 
-    #print('Conectado a %s' % mqtt_server, 20, 30, 0)
+    #print('connected to %s' % mqtt_server, 20, 30, 0)
     print('MQTT:%s' % mqtt_server)
     led_2.on()
     return client
 
+
 # Reinicia la conexión de MQTT
-
-
-def Reinciar_conexion():
+def Restart_Connection():
     led_2.off()
     print('Fallo en la conexion. Intentando de nuevo...')
     time.sleep(10)
     machine.reset()
+
 
 
 def patterns(e):
@@ -148,9 +152,9 @@ if __name__ == '__main__':
     print(wlan.ifconfig())
 
     try:
-        client = Conexion_MQTT()
+        client = Connection_MQTT()
     except OSError as e:
-        Reinciar_conexion()
+        Restart_Connection()
 
     _thread.start_new_thread(start_leds, (25,))
 
@@ -160,4 +164,5 @@ if __name__ == '__main__':
             time.sleep_ms(25)
 
         except OSError as e:
-            Reinciar_conexion()
+            Restart_Connection()
+
