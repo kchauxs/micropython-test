@@ -21,36 +21,46 @@ pswd_mqtt = ''
 # topico
 root_topic = ''
 subtopic = ''
+
 node = root_topic + '/' + subtopic + '/'
 
 # LEDS
 led_2 = Pin(2, Pin.OUT)
 np = neopixel.NeoPixel(machine.Pin(13), 60)
-color = (0, 255, 0)
+color = (0, 0, 255)
 pattern = 'all'
 # buzzer - (opcional)
-buzzer = Pin(26, Pin.OUT)
+buzzer = Pin(12, Pin.OUT)
 
 
-def activate_buzzer(_time=200):
+""" def activate_buzzer(_time=200):
     buzzer.on()
     time.sleep_ms(_time)
-    buzzer.off()
+    buzzer.off() """
 
 
+def activate_buzzer(function):
+    def wrapper(*args, **kwargs):
+        function(*args, **kwargs)
+        buzzer.on()
+        time.sleep_ms(200)
+        buzzer.off()
+    return wrapper
+
+
+@activate_buzzer
 def change_color(msg):
     global color
     msg = str(msg.decode()).lstrip('#')
     color = tuple(int(msg[i:i+2], 16) for i in (0, 2, 4))
-    # activate_buzzer()
 
 
+@activate_buzzer
 def change_pattern(msg):
     global pattern
     msg = str(msg.decode())
     if len(msg) != 0:
         pattern = msg
-        # activate_buzzer()
 
 
 def form_sub(topic, msg):
@@ -84,7 +94,6 @@ def Restart_Connection():
     print('Fallo en la conexion. Intentando de nuevo...')
     time.sleep(10)
     machine.reset()
-
 
 
 def patterns(e):
@@ -165,4 +174,3 @@ if __name__ == '__main__':
 
         except OSError as e:
             Restart_Connection()
-
