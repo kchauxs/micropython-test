@@ -1,4 +1,5 @@
 import time
+import esp32
 import machine
 import network
 import _thread
@@ -6,7 +7,7 @@ import neopixel
 import ubinascii
 from machine import unique_id, Pin
 from umqttsimple import MQTTClient
-
+from pattern import Patterns
 
 # WIFI
 ssid = ''  # Nombre de la Red
@@ -29,14 +30,9 @@ led_2 = Pin(2, Pin.OUT)
 np = neopixel.NeoPixel(machine.Pin(13), 60)
 color = (0, 0, 255)
 pattern = 'all'
+p = Patterns(np, 5)
 # buzzer - (opcional)
 buzzer = Pin(12, Pin.OUT)
-
-
-""" def activate_buzzer(_time=200):
-    buzzer.on()
-    time.sleep_ms(_time)
-    buzzer.off() """
 
 
 def activate_buzzer(function):
@@ -51,31 +47,33 @@ def activate_buzzer(function):
 @activate_buzzer
 def change_color(msg):
     global color
-    msg = str(msg.decode()).lstrip('#')
+    msg = msg.lstrip('#')
     color = tuple(int(msg[i:i+2], 16) for i in (0, 2, 4))
 
 
 @activate_buzzer
 def change_pattern(msg):
     global pattern
-    msg = str(msg.decode())
-    if len(msg) != 0:
-        pattern = msg
+    if pattern == msg:
+        return
+    pattern = msg
 
 
 def form_sub(topic, msg):
-    if topic.decode() == node+'rgb':
-        change_color(msg)
+    msg = str(msg.decode())
+    if len(msg) != 0:
 
-    if topic.decode() == node+'pattern':
-        change_pattern(msg)
+        if topic.decode() == node+'rgb':
+            change_color(msg)
 
-    print("[INFO] Recivido de:", (topic.decode(), msg.decode()))
+        if topic.decode() == node+'pattern':
+            change_pattern(msg)
+
+        print("[INFO] Recivido de:", (topic.decode(), msg))
 
 
 def Connection_MQTT():
     client_id = ubinascii.hexlify(unique_id())
-
     client = MQTTClient(client_id, mqtt_server,
                         port_mqtt, user_mqtt, pswd_mqtt)
     client.set_callback(form_sub)
@@ -88,6 +86,17 @@ def Connection_MQTT():
     return client
 
 
+def do_connect():
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    if not wlan.isconnected():
+        print('connecting to network...')
+        wlan.connect(ssid, password)
+        while not wlan.isconnected():
+            print('.....')
+    print('network config:', wlan.ifconfig())
+
+
 # Reinicia la conexión de MQTT
 def Restart_Connection():
     led_2.off()
@@ -96,81 +105,61 @@ def Restart_Connection():
     machine.reset()
 
 
-def patterns(e):
-    n = np.n
+def patterns():
+    global color
+    global pattern
 
     if pattern == 'cycle':
-        for i in range(1 * n):
-            for j in range(n):
-                np[j] = (0, 0, 0)
-            np[i % n] = color
-            np.write()
-            time.sleep_ms(e)
+        p.cycle(color)
 
     if pattern == 'bounce':
-        for i in range(1 * n):
-            for j in range(n):
-                np[j] = color
-            if (i // n) % 2 == 0:
-                np[i % n] = (0, 0, 0)
-            else:
-                np[n - 1 - (i % n)] = (0, 0, 0)
-            np.write()
-            time.sleep_ms(e)
-
-    if pattern == 'fade':
-        for i in range(0, 4 * 256, 8):
-            for j in range(n):
-                if (i // 256) % 2 == 0:
-                    val = i & 0xff
-                else:
-                    val = 255 - (i & 0xff)
-                np[j] = (val, 0, 0)
-            np.write()
-
-    if pattern == 'clear':
-        for i in range(n):
-            np[i] = (0, 0, 0)
-        np.write()
+        p.bounce(color)
 
     if pattern == 'all':
-        for i in range(n):
-            np[i] = color
-        np.write()
+        p.all(color)
+
+    if pattern == 'fade':
+        p.fade()
+
+    if pattern == 'clear':
+        p.clear()
 
 
-def start_leds(e):
+def start_leds():
     while 1:
-        patterns(e)
+        patterns()
 
 
 def fahrenhei_celsius(x):
-    return str(round((x-32)*(5/9)))
+    return round((x-32)*(5/9), 2)
 
 
 if __name__ == '__main__':
-
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)  # Activa el Wifi
-    wlan.connect(ssid, password)  # Hace la conexión
-
-    while wlan.isconnected() == False:  # Espera a que se conecte a la red
-        print('....')
-
-    print('WiFi: %s' % ssid)
-    print(wlan.ifconfig())
+    do_connect()
 
     try:
         client = Connection_MQTT()
     except OSError as e:
         Restart_Connection()
 
-    _thread.start_new_thread(start_leds, (25,))
+    _thread.start_new_thread(start_leds, ())
+
+    last_message = 0
+    message_interval = 5
+    counter = 0
 
     while True:
+
         try:
             client.check_msg()
-            time.sleep_ms(25)
+
+            if (time.time() - last_message) > message_interval:
+                temp = fahrenhei_celsius(esp32.raw_temperature())
+                msg = b'Temp %d:' % counter + ' %d' % temp
+                client.publish(node+'temp', msg)
+                counter += 1
+                last_message = time.time()
+                time.sleep_ms(50)
 
         except OSError as e:
             Restart_Connection()
