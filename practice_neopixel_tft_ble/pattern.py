@@ -80,7 +80,6 @@ class Patterns():
 
         self.clear(None)
 
-
     def presentation(self, color=None):
         self.sweep((0, 0, 255))
         time.sleep_ms(500)
@@ -97,17 +96,24 @@ class Patterns():
         time.sleep_ms(500)
         self.clear()
 
-    def select_pattern(self):
-        return {
-            'cycle':            self.cycle,
-            'bounce':           self.bounce,
-            'all':              self.all,
-            'fade':             self.fade,
-            'sweep':            self.sweep,
-            'pyramid':          self.pyramid,
-            'presentation':     self.presentation,
+    def select_pattern(self, pattern):
 
-        }
+        if pattern == 'cycle':
+            return self.cycle
+        if pattern == 'bounce':
+            return self.bounce
+        if pattern == 'all':
+            return self.all
+        if pattern == 'fade':
+            return self.fade
+        if pattern == 'sweep':
+            return self.sweep
+        if pattern == 'pyramid':
+            return self.pyramid
+        if pattern == 'presentation':
+            return self.presentation
+        if pattern == 'clear':
+            return self.clear
 
 
 if __name__ == '__main__':
@@ -115,4 +121,4 @@ if __name__ == '__main__':
 
     p = Patterns(np, 5)
     for _ in range(5):
-        p.select_pattern()['presentation']((255, 0, 0))
+        p.select_pattern('sweep')((255, 0, 0))

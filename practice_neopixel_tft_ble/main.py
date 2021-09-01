@@ -1,14 +1,14 @@
-import _thread
-from machine import Pin, SPI
-from ST7735 import TFT
-from sysfont import sysfont
 import time
+import _thread
+import neopixel
+from ST7735 import TFT
+from machine import Pin, SPI
+from sysfont import sysfont
 from ble import ESP32_BLE
 from pattern import Patterns
-import neopixel
+
+
 np = neopixel.NeoPixel(Pin(13), 60)
-
-
 spi = SPI(1, 1000000, polarity=1, phase=1, sck=Pin(14), mosi=Pin(27))
 tft = TFT(spi, 26, 25, 33)  # DC/AO, RST, CS
 
@@ -36,10 +36,11 @@ def tft_draw_char(string, px, py):
         px = px + 6
 
 
-
 y = 30
+
+
 def notification(function):
-    
+
     def wrapper(*args, **kwargs):
         global y
         is_change = function(*args, **kwargs)
@@ -47,17 +48,16 @@ def notification(function):
             led_12.on()
             time.sleep_ms(200)
             led_12.off()
-            
+
             if y >= 140:
                 tft.fill(TFT.BLACK)
                 tft.text((25, 10), "Notification", TFT.CYAN, sysfont, 1)
                 y = 30
-            
+
             tft.text((5, y), ">>>", TFT.GREEN, sysfont, 1)
-            tft_draw_char(args[0],26, y)
+            tft_draw_char(args[0], 26, y)
             y += 10
 
-            
     return wrapper
 
 
@@ -94,9 +94,8 @@ def start_leds():
 def patterns():
     global color
     global pattern
-    global reverse
 
-    p.select_pattern()[pattern](color)
+    p.select_pattern(pattern)(color)
 
 
 def bluetooth_run():
@@ -122,8 +121,6 @@ def bluetooth_run():
 
         ble.ble_msg = ""
         time.sleep_ms(100)
-
-
 
 
 def init():
@@ -152,4 +149,3 @@ def init():
 if __name__ == '__main__':
     init()
     bluetooth_run()
-

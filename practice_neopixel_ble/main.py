@@ -24,7 +24,7 @@ def notification(function):
             led_12.on()
             time.sleep_ms(200)
             led_12.off()
-            ble.send('>>> '+ args[0])
+            ble.send('>>> ' + args[0])
     return wrapper
 
 
@@ -61,7 +61,7 @@ def start_leds():
 def patterns():
     global color
     global pattern
-    p.select_pattern()[pattern](color)
+    p.select_pattern(pattern)(color)
 
 
 def bluetooth_run():

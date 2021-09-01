@@ -22,12 +22,13 @@ pswd_mqtt = ''
 # topico
 root_topic = ''
 subtopic = ''
-
 node = root_topic + '/' + subtopic + '/'
 
-# LEDS
-led_2 = Pin(2, Pin.OUT)
-led_12 = Pin(12, Pin.OUT)  # buzzer o led - (opcional)
+# LEDS / botton
+but = Pin(0, Pin.IN)  # boot button
+led_2 = Pin(2, Pin.OUT)  # subscribe message
+led_12 = Pin(12, Pin.OUT)  # buzzer o led - (optional)
+led_25 = Pin(25, Pin.OUT)  # publish message
 
 np = neopixel.NeoPixel(machine.Pin(13), 60)
 p = Patterns(np, 5)
@@ -107,7 +108,7 @@ def do_connect():
     print('network config:', wlan.ifconfig())
 
 
-# Reinicia la conexión de MQTT
+# Restart the Wifi and MQTT connection
 def Restart_Connection():
     led_2.off()
     print('Fallo en la conexion. Intentando de nuevo...')
@@ -115,11 +116,15 @@ def Restart_Connection():
     machine.reset()
 
 
+def buttons_irq(pin):
+    led_2.value(not led_2.value())
+
+
 def patterns():
     global color
     global pattern
 
-    p.select_pattern()[pattern](color)
+    p.select_pattern(pattern)(color)
 
 
 def start_leds():
@@ -131,6 +136,7 @@ def fahrenhei_celsius(x): return round((x-32)*(5/9), 2)
 
 
 if __name__ == '__main__':
+    but.irq(handler=buttons_irq)
     do_connect()
 
     try:
@@ -138,7 +144,7 @@ if __name__ == '__main__':
         _thread.start_new_thread(start_leds, ())
 
         last_message = 0
-        message_interval = 5
+        message_interval = 60
         counter = 0
 
         while True:
@@ -150,7 +156,9 @@ if __name__ == '__main__':
                 client.publish(node+'temp', msg)
                 counter += 1
                 last_message = time.time()
-                time.sleep_ms(50)
+                led_25.on()
+                time.sleep_ms(100)
+                led_25.off()
 
     except OSError as e:
         Restart_Connection()
