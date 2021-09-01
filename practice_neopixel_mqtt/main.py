@@ -136,7 +136,7 @@ def fahrenhei_celsius(x): return round((x-32)*(5/9), 2)
 
 
 if __name__ == '__main__':
-    but.irq(handler=buttons_irq)
+    but.irq(trigger=Pin.IRQ_FALLING, handler=buttons_irq)
     do_connect()
 
     try:
