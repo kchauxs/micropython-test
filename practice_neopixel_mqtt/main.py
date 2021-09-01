@@ -15,7 +15,7 @@ password = ''  # Contraseña de la red
 
 # MQTT
 mqtt_server = ''
-port_mqtt = 1883
+port_mqtt = 0
 # user
 user_mqtt = ''
 pswd_mqtt = ''
@@ -27,36 +27,44 @@ node = root_topic + '/' + subtopic + '/'
 
 # LEDS
 led_2 = Pin(2, Pin.OUT)
+led_12 = Pin(12, Pin.OUT)  # buzzer o led - (opcional)
+
 np = neopixel.NeoPixel(machine.Pin(13), 60)
-color = (0, 0, 255)
-pattern = 'all'
 p = Patterns(np, 5)
-# buzzer - (opcional)
-buzzer = Pin(12, Pin.OUT)
 
 
-def activate_buzzer(function):
+color = (209, 6, 182)
+pattern = 'all'
+
+
+def notification(function):
     def wrapper(*args, **kwargs):
-        function(*args, **kwargs)
-        buzzer.on()
-        time.sleep_ms(200)
-        buzzer.off()
+        is_change = function(*args, **kwargs)
+        if is_change:
+            led_12.on()
+            time.sleep_ms(200)
+            led_12.off()
     return wrapper
 
 
-@activate_buzzer
+@notification
 def change_color(msg):
     global color
     msg = msg.lstrip('#')
-    color = tuple(int(msg[i:i+2], 16) for i in (0, 2, 4))
+    msg = tuple(int(msg[i:i+2], 16) for i in (0, 2, 4))
+    if color != msg:
+        color = msg
+        return True
+    return False
 
 
-@activate_buzzer
+@notification
 def change_pattern(msg):
     global pattern
-    if pattern == msg:
-        return
-    pattern = msg
+    if pattern != msg:
+        pattern = msg
+        return True
+    return False
 
 
 def form_sub(topic, msg):
@@ -74,13 +82,15 @@ def form_sub(topic, msg):
 
 def Connection_MQTT():
     client_id = ubinascii.hexlify(unique_id())
-    client = MQTTClient(client_id, mqtt_server,
-                        port_mqtt, user_mqtt, pswd_mqtt)
+    client = MQTTClient(client_id,
+                        mqtt_server,
+                        port_mqtt,
+                        user_mqtt,
+                        pswd_mqtt)
     client.set_callback(form_sub)
     client.connect()
     client.subscribe(b''+node+'#')
 
-    #print('connected to %s' % mqtt_server, 20, 30, 0)
     print('MQTT:%s' % mqtt_server)
     led_2.on()
     return client
@@ -101,7 +111,7 @@ def do_connect():
 def Restart_Connection():
     led_2.off()
     print('Fallo en la conexion. Intentando de nuevo...')
-    time.sleep(10)
+    time.sleep(5)
     machine.reset()
 
 
@@ -109,20 +119,7 @@ def patterns():
     global color
     global pattern
 
-    if pattern == 'cycle':
-        p.cycle(color)
-
-    if pattern == 'bounce':
-        p.bounce(color)
-
-    if pattern == 'all':
-        p.all(color)
-
-    if pattern == 'fade':
-        p.fade()
-
-    if pattern == 'clear':
-        p.clear()
+    p.select_pattern()[pattern](color)
 
 
 def start_leds():
@@ -130,8 +127,7 @@ def start_leds():
         patterns()
 
 
-def fahrenhei_celsius(x):
-    return round((x-32)*(5/9), 2)
+def fahrenhei_celsius(x): return round((x-32)*(5/9), 2)
 
 
 if __name__ == '__main__':
@@ -139,18 +135,13 @@ if __name__ == '__main__':
 
     try:
         client = Connection_MQTT()
-    except OSError as e:
-        Restart_Connection()
+        _thread.start_new_thread(start_leds, ())
 
-    _thread.start_new_thread(start_leds, ())
+        last_message = 0
+        message_interval = 5
+        counter = 0
 
-    last_message = 0
-    message_interval = 5
-    counter = 0
-
-    while True:
-
-        try:
+        while True:
             client.check_msg()
 
             if (time.time() - last_message) > message_interval:
@@ -161,5 +152,5 @@ if __name__ == '__main__':
                 last_message = time.time()
                 time.sleep_ms(50)
 
-        except OSError as e:
-            Restart_Connection()
+    except OSError as e:
+        Restart_Connection()

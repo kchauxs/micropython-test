@@ -1,1 +1,4 @@
-*.txt 
+*.txt
+*.bin 
+env
+test.py
