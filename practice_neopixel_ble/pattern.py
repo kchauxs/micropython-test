@@ -5,32 +5,34 @@ import machine
 
 class Patterns():
 
-    def __init__(self, np, e):
+    def __init__(self, np, color, sleep, pattern):
         self.np = np
         self.n = np.n
-        self.e = e
+        self.sleep = sleep
         self.reverse = False
+        self.color = color
+        self.pattern = pattern
 
-    def cycle(self, color):
+    def cycle(self):
         for i in range(1 * self.n):
             for j in range(self.n):
                 self.np[j] = (0, 0, 0)
-            self.np[i % self.n] = color
+            self.np[i % self.n] = self.color
             self.np.write()
-            time.sleep_ms(self.e)
+            time.sleep_ms(self.sleep)
 
-    def bounce(self, color):
+    def bounce(self):
         for i in range(1 * self.n):
             for j in range(self.n):
-                self.np[j] = color
+                self.np[j] = self.color
             if (i // self.n) % 2 == 0:
                 self.np[i % self.n] = (0, 0, 0)
             else:
                 self.np[self.n - 1 - (i % self.n)] = (0, 0, 0)
             self.np.write()
-            time.sleep_ms(self.e)
+            time.sleep_ms(self.sleep)
 
-    def fade(self, color=None):
+    def fade(self):
         for i in range(0, 4 * 256, 8):
             for j in range(self.n):
                 if (i // 256) % 2 == 0:
@@ -40,17 +42,17 @@ class Patterns():
                 self.np[j] = (val, 0, 0)
                 self.np.write()
 
-    def all(self, color):
+    def all(self):
         for i in range(self.n):
-            self.np[i] = color
+            self.np[i] = self.color
         self.np.write()
 
-    def clear(self, color=None):
+    def clear(self):
         for i in range(self.n):
             self.np[i] = (0, 0, 0)
         self.np.write()
 
-    def sweep(self, color):
+    def sweep(self):
         self.reverse = not self.reverse
         for i in range(self.n):
             if not self.reverse:
@@ -58,19 +60,19 @@ class Patterns():
             else:
                 j = ((self.n - 1) - i) % self.n
 
-            self.np[j] = color
+            self.np[j] = self.color
             time.sleep_ms(25)
             self.np.write()
-        self.clear(None)
+        self.clear()
 
-    def pyramid(self, color):
+    def pyramid(self):
         for i in range(self.n//2):
             j = (self.n // 2) + i
             k = (self.n // 2) - i
 
             if j % 2 == 0 and k % 2 == 0:
-                self.np[j] = color
-                self.np[k] = color
+                self.np[j] = self.color
+                self.np[k] = self.color
             else:
                 self.np[j] = (255, 255, 255)
                 self.np[k] = (255, 255, 255)
@@ -78,47 +80,53 @@ class Patterns():
             self.np.write()
             time.sleep_ms(50)
 
-        self.clear(None)
+        self.clear()
 
-    def presentation(self, color=None):
+    def presentation(self):
         self.sweep((0, 0, 255))
         time.sleep_ms(500)
         self.sweep((255, 0, 0))
         time.sleep_ms(500)
         self.all((255, 255, 255))
         time.sleep_ms(700)
-        self.clear(None)
-        self.pyramid(color)
+        self.clear()
+        self.pyramid()
         time.sleep_ms(500)
 
-    def intermittent(self, color):
-        self.all(color)
+    def intermittent(self):
+        self.all()
         time.sleep_ms(500)
         self.clear()
+        time.sleep_ms(500)
 
-    def select_pattern(self, pattern):
-
-        if pattern == 'cycle':
+    def select_pattern(self):
+        if self.pattern == 'cycle':
             return self.cycle
-        if pattern == 'bounce':
+        if self.pattern == 'bounce':
             return self.bounce
-        if pattern == 'all':
+        if self.pattern == 'all':
             return self.all
-        if pattern == 'fade':
+        if self.pattern == 'fade':
             return self.fade
-        if pattern == 'sweep':
+        if self.pattern == 'sweep':
             return self.sweep
-        if pattern == 'pyramid':
+        if self.pattern == 'pyramid':
             return self.pyramid
-        if pattern == 'presentation':
+        if self.pattern == 'presentation':
             return self.presentation
-        if pattern == 'clear':
+        if self.pattern == 'clear':
             return self.clear
+        if self.pattern == 'intermittent':
+            return self.intermittent
 
 
 if __name__ == '__main__':
     np = neopixel.NeoPixel(machine.Pin(13), 60)
 
-    p = Patterns(np, 5)
-    for _ in range(5):
-        p.select_pattern('sweep')((255, 0, 0))
+    p = Patterns(np, (255, 0, 0), 5, 'intermittent')
+    for i in range(5):
+        if i == 3:
+            p.color = (0, 0, 255)
+            p.pattern = 'sweep'
+        p.select_pattern()()
+

@@ -5,6 +5,8 @@ import ubluetooth
 
 #ble_msg = ""
 
+i = 0
+
 
 class ESP32_BLE():
     def __init__(self, name):
@@ -24,12 +26,22 @@ class ESP32_BLE():
         self.advertiser()
 
     def connected(self):
-        self.led.value(1)
+        self.led.value(0)
         self.timer1.deinit()
 
+    def intermittent(self, x):
+        global i
+        if i < 200:
+            self.led.value(not self.led.value())
+            i += 1
+        else:
+            self.led.value(1)
+
     def disconnected(self):
+        global i
+        i = 0
         self.timer1.init(period=100, mode=Timer.PERIODIC,
-                         callback=lambda t: self.led.value(not self.led.value()))
+                         callback=self.intermittent)
 
     def ble_irq(self, event, data):
         #global ble_msg
@@ -94,3 +106,4 @@ if __name__ == '__main__':
             print('LED is ON.' if led.value() else 'LED is OFF')
             ble.send('LED is ON.' if led.value() else 'LED is OFF')
         sleep_ms(100)
+
