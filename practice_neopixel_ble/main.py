@@ -1,4 +1,5 @@
 import time
+import random
 import _thread
 import neopixel
 from machine import Pin
@@ -7,12 +8,12 @@ from ble import ESP32_BLE
 from pattern import Patterns
 
 np = neopixel.NeoPixel(Pin(13), 60)
-p = Patterns(np, color=(209, 6, 182), sleep=5, pattern='all')
+p = Patterns(np, color=(255, 0, 255), sleep=5, pattern='all')
 ble = ESP32_BLE("ESP32BLE_BLACK")
 
 
 colors = {
-    0: (209, 6, 182),
+    0: (255, 0, 255),
     1: (255, 0, 0),
     2: (0, 255, 0),
     3: (0, 0, 255),
@@ -37,6 +38,8 @@ pattern = 0
 
 led_2 = Pin(2, Pin.OUT, value=0)
 led_12 = Pin(12, Pin.OUT)
+
+is_random = False
 
 
 def notification(function):
@@ -73,10 +76,9 @@ def change_color(is_continue):
     global color
     try:
         is_continue = int(is_continue)
+        if not 0 <= is_continue < 2:
+            return False
     except:
-        return False
-
-    if not 0 <= is_continue < 2:
         return False
 
     if is_continue:
@@ -92,7 +94,12 @@ def change_color(is_continue):
 @notification
 def change_pattern(is_continue):
     global pattern
-    is_continue = int(is_continue)
+    try:
+        is_continue = int(is_continue)
+        if not 0 <= is_continue < 2:
+            return False
+    except:
+        return False
 
     if is_continue:
         pattern -= 1
@@ -105,25 +112,22 @@ def change_pattern(is_continue):
 
 
 def buttons_irq():
-    global ble
     led_2.value(not led_2.value())
 
 
-def start_leds():
+def run_patterns():
     while True:
-        set_patterns()
-
-
-def set_patterns():
-    global pattern
-    p.select_pattern()()
+        if is_random:
+            p.color = colors[random.randint(0, len_colors)]
+        p.select_pattern()()
 
 
 def bluetooth_run():
     global ble
     global client
+    global is_random
     led_2.off()
-    _thread.start_new_thread(start_leds, ())
+    _thread.start_new_thread(run_patterns, ())
     done = True
 
     while done:
@@ -146,10 +150,12 @@ def bluetooth_run():
         if msg[0] == 'change_pattern':
             change_pattern(msg[1])
 
+        if msg[0] == 'random':
+            is_random = not is_random
+
         ble.ble_msg = ""
         time.sleep_ms(100)
 
 
 if __name__ == '__main__':
     bluetooth_run()
-

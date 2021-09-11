@@ -123,10 +123,6 @@ class Patterns():
 if __name__ == '__main__':
     np = neopixel.NeoPixel(machine.Pin(13), 60)
 
-    p = Patterns(np, (255, 0, 0), 5, 'intermittent')
-    for i in range(5):
-        if i == 3:
-            p.color = (0, 0, 255)
-            p.pattern = 'sweep'
+    p = Patterns(np, (255, 0, 0), 5, 'sweep')
+    while 1:
         p.select_pattern()()
-
