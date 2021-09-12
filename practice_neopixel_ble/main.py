@@ -23,9 +23,9 @@ colors = {
 
 
 patterns = {
-    0: 'cycle',
-    1: 'bounce',
-    2: 'all',
+    0: 'all',
+    1: 'cycle',
+    2: 'bounce',
     3: 'sweep',
     4: 'intermittent'
 }
@@ -118,7 +118,7 @@ def buttons_irq():
 def run_patterns():
     while True:
         if is_random:
-            p.color = colors[random.randint(0, len_colors)]
+            p.color = colors[random.randint(0, len_colors - 1)]
         p.select_pattern()()
 
 
